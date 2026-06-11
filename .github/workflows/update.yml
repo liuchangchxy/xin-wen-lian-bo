@@ -6,6 +6,9 @@ on:
     # 东八区 20:30 (UTC+8 = UTC 12:30), 联播结束后抓取
     - cron: '30 12 * * *'
 
+permissions:
+  contents: write
+
 jobs:
   update:
     name: Update today xin wen lian bo
