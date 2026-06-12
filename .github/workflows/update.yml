@@ -26,28 +26,40 @@ jobs:
         run: |
           FILE="news/$(date +%Y%m%d).md"
           test -f "$FILE" || { echo "No news file today"; exit 0; }
-          python3 -c "
-          import json, sys, urllib.request, os
-          with open('$FILE') as f:
+          python3 << 'PYEOF'
+          import json, re, urllib.request, os
+          from datetime import date
+          
+          with open(os.environ.get("FILE", "news/" + date.today().strftime("%Y%m%d") + ".md")) as f:
               md = f.read()
+          
+          # Convert headers to bold (Feishu card md doesn't support #)
+          md = re.sub(r'^#{1,6}\s+(.+)$', r'**\1**', md, flags=re.MULTILINE)
+          # Remove [查看原文](url) lines - keep just the link
+          # Feishu card md supports [text](url) natively
+          
+          # Feishu card content limit ~30KB, truncate if needed
+          if len(md.encode()) > 28000:
+              md = md[:14000] + "\n\n...(内容过长，已截断)"
+          
           card = {
-              'msg_type': 'interactive',
-              'card': {
-                  'header': {
-                      'title': {'tag': 'plain_text', 'content': '📺 新闻联播 $(date +%Y-%m-%d)'},
-                      'template': 'blue'
+              "msg_type": "interactive",
+              "card": {
+                  "header": {
+                      "title": {"tag": "plain_text", "content": "📺 新闻联播 " + date.today().strftime("%Y-%m-%d")},
+                      "template": "blue"
                   },
-                  'elements': [{'tag': 'markdown', 'content': md}]
+                  "elements": [{"tag": "markdown", "content": md}]
               }
           }
           req = urllib.request.Request(
-              os.environ['FEISHU_WEBHOOK'],
-              data=json.dumps(card).encode(),
-              headers={'Content-Type': 'application/json'}
+              os.environ["FEISHU_WEBHOOK"],
+              data=json.dumps(card, ensure_ascii=False).encode(),
+              headers={"Content-Type": "application/json"}
           )
           resp = urllib.request.urlopen(req)
           print(resp.read().decode())
-          "
+          PYEOF
       - run: git config --local user.email "github-actions[bot]@github.com"
       - run: git config --local user.name "github-actions[bot]"
       - run: git add .
