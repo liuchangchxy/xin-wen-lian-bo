@@ -24,8 +24,4 @@ jobs:
       - run: git config --local user.name "github-actions[bot]"
       - run: git add .
       - run: git diff --cached --quiet || git commit -m "AUTO UPDATE [bot]"
-      - name: Push master changes
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: master
+      - run: git push origin master
