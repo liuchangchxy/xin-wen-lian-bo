@@ -20,6 +20,34 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npm run index
+      - name: Send to Feishu
+        env:
+          FEISHU_WEBHOOK: https://open.feishu.cn/open-apis/bot/v2/hook/5a50b802-7130-4859-96e6-4a1eff848ee7
+        run: |
+          FILE="news/$(date +%Y%m%d).md"
+          test -f "$FILE" || { echo "No news file today"; exit 0; }
+          python3 -c "
+          import json, sys, urllib.request, os
+          with open('$FILE') as f:
+              md = f.read()
+          card = {
+              'msg_type': 'interactive',
+              'card': {
+                  'header': {
+                      'title': {'tag': 'plain_text', 'content': '📺 新闻联播 $(date +%Y-%m-%d)'},
+                      'template': 'blue'
+                  },
+                  'elements': [{'tag': 'markdown', 'content': md}]
+              }
+          }
+          req = urllib.request.Request(
+              os.environ['FEISHU_WEBHOOK'],
+              data=json.dumps(card).encode(),
+              headers={'Content-Type': 'application/json'}
+          )
+          resp = urllib.request.urlopen(req)
+          print(resp.read().decode())
+          "
       - run: git config --local user.email "github-actions[bot]@github.com"
       - run: git config --local user.name "github-actions[bot]"
       - run: git add .
